@@ -34,7 +34,7 @@ export default function Home() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [price, setPrice] = useState<PriceData | null>(null)
   const [leaderboard, setLeaderboard] = useState<LeaderboardData | null>(null)
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [lastUpdate, setLastUpdate] = useState<string>('')
 
   const fetchAll = useCallback(async () => {
     try {
@@ -47,7 +47,7 @@ export default function Home() {
       if (statsRes.ok) setStats(await statsRes.json())
       if (priceRes.ok) setPrice(await priceRes.json())
       if (lbRes.ok) setLeaderboard(await lbRes.json())
-      setLastUpdate(new Date())
+      setLastUpdate(new Date().toLocaleTimeString())
     } catch (e) {
       console.error('Fetch error:', e)
     }
@@ -72,7 +72,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse-slow" />
             <span className="text-xs text-zinc-500">
-              Updated {lastUpdate.toLocaleTimeString()}
+              {lastUpdate ? `Updated ${lastUpdate}` : 'Loading...'}
             </span>
           </div>
         </div>
