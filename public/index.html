@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>BOTCOIN MINING</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0a; color: #e0e0e0; font-family: 'IBM Plex Mono', 'Fira Code', monospace; font-size: 12px; -webkit-font-smoothing: antialiased; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 2px; }
+@keyframes blink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0.3; } }
+@keyframes flashIn { 0% { background: rgba(0,255,136,0.1); } 100% { background: transparent; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+const COORDINATOR = 'https://coordinator.agentmoney.net';
+const BOTCOIN_CONTRACT = '0xA601877977340862Ca67f816eb079958E5bd0BA3';
+const MINING_CONTRACT = '0xd572e61e1B627d4105832C815Ccd722B5baD9233';
+const ALCHEMY_URL = 'https://base-mainnet.g.alchemy.com/v2/Njbz8cn6hHtnlMHEGxpWB';
+
+const C = {
+  bg: "#0a0a0a", panel: "#0d0d0d", border: "#1a1a1a", borderHover: "#2a2a2a",
+  green: "#00ff88", greenDim: "#00cc6a", greenFaint: "rgba(0,255,136,0.08)",
+  red: "#ff3355", redFaint: "rgba(255,51,85,0.08)",
+  amber: "#ffaa00", amberDim: "#cc8800",
+  cyan: "#00ddff",
+  text: "#e0e0e0", textDim: "#666", textMuted: "#444",
+};
+
+function Scanline() {
+  return <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, pointerEvents: "none", zIndex: 9999,
+    background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)" }} />;
+}
+
+function GlowText({ children, color = C.green, style = {} }) {
+  return <span style={{ color, textShadow: `0 0 8px ${color}44, 0 0 20px ${color}22`, ...style }}>{children}</span>;
+}
+
+function Panel({ children, title, style = {}, headerRight }) {
+  return (
+    <div style={{ background: C.panel, border: `1px solid ${C.border}`, borderRadius: 2, overflow: "hidden", ...style }}>
+      {title && (
+        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.01)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ color: C.textMuted, fontSize: 11 }}>▸</span>
+            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: C.textDim }}>{title}</span>
+          </div>
+          {headerRight}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+function MetricBox({ label, value, sub, color = C.text }) {
+  return (
+    <div style={{ padding: "10px 14px", background: C.panel, border: `1px solid ${C.border}`, borderRadius: 2, flex: 1, minWidth: 120 }}>
+      <div style={{ fontSize: 9, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>{label}</div>
+      <GlowText color={color} style={{ fontSize: 18, fontWeight: 700 }}>{value}</GlowText>
+      {sub && <div style={{ fontSize: 10, color: C.textDim, marginTop: 4 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function pad(n) { return n.toString().padStart(2, '0'); }
+function fmtNum(n) {
+  const num = typeof n === 'string' ? parseFloat(n) : n;
+  if (isNaN(num)) return '---';
+  if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+  if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+  if (num >= 1e3) return num.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  return num.toString();
+}
+function truncAddr(a) { return a.slice(0, 6) + '···' + a.slice(-4); }
+
+function StatusBar({ stats, epoch, price, connected }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const i = setInterval(() => setTick(t => t + 1), 1000); return () => clearInterval(i); }, []);
+  const ts = new Date().toLocaleTimeString("en-US", { hour12: false });
+  const change = price?.change24h || 0;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 16px", borderBottom: `1px solid ${C.border}`, background: C.panel, fontSize: 11, flexWrap: "wrap", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <GlowText color={C.green} style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.15em" }}>BOTCOIN::MINING</GlowText>
+        <span style={{ color: C.textMuted }}>│</span>
+        <span style={{ color: C.textDim }}><span style={{ color: connected ? C.green : C.red }}>●</span> {connected ? 'LIVE' : 'OFFLINE'}</span>
+        <span style={{ color: C.textMuted }}>│</span>
+        <span style={{ color: C.textDim }}>EPOCH <span style={{ color: C.cyan, fontWeight: 700 }}>#{epoch?.epochId || '?'}</span></span>
+        <span style={{ color: C.textMuted }}>│</span>
+        <span style={{ color: C.textDim }}>MINERS <span style={{ color: C.amber }}>{stats?.activeMiners || '?'}</span></span>
+        <span style={{ color: C.textMuted }}>│</span>
+        <span style={{ color: C.textDim }}>PRICE <span style={{ color: change >= 0 ? C.green : C.red }}>${price?.price ? parseFloat(price.price).toFixed(8) : '...'}</span></span>
+        {price && <span style={{ color: change >= 0 ? C.greenDim : C.red, fontSize: 10 }}>({change >= 0 ? '+' : ''}{change.toFixed(1)}%)</span>}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ color: C.textDim }}>BASE CHAIN</span>
+        <span style={{ color: C.textMuted }}>│</span>
+        <GlowText color={C.green} style={{ fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{ts}</GlowText>
+      </div>
+    </div>
+  );
+}
+
+function EpochCountdown({ epoch }) {
+  const [now, setNow] = useState(Math.floor(Date.now() / 1000));
+  useEffect(() => { const i = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000); return () => clearInterval(i); }, []);
+
+  const epochEnd = epoch?.nextEpochStartTimestamp || 0;
+  const duration = parseInt(epoch?.epochDurationSeconds || '86400');
+  const epochStart = epochEnd - duration;
+  const remaining = Math.max(0, epochEnd - now);
+  const elapsed = Math.max(0, now - epochStart);
+  const progress = duration > 0 ? Math.min(100, (elapsed / duration) * 100) : 0;
+  const h = Math.floor(remaining / 3600);
+  const m = Math.floor((remaining % 3600) / 60);
+  const s = remaining % 60;
+
+  return (
+    <Panel title="Epoch Timer" headerRight={
+      <span style={{ fontSize: 10, color: C.textDim }}>{progress.toFixed(1)}% complete</span>
+    }>
+      <div style={{ padding: "24px 14px", textAlign: "center" }}>
+        <div style={{ fontSize: 9, color: C.textMuted, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 12 }}>NEXT EPOCH IN</div>
+        <GlowText color={C.green} style={{ fontSize: 48, fontWeight: 700, letterSpacing: "0.1em", fontVariantNumeric: "tabular-nums" }}>
+          {pad(h)}<span style={{ color: C.textMuted, animation: "blink 1s infinite" }}>:</span>{pad(m)}<span style={{ color: C.textMuted, animation: "blink 1s infinite" }}>:</span>{pad(s)}
+        </GlowText>
+        {/* Progress bar */}
+        <div style={{ marginTop: 20, height: 3, background: C.border, borderRadius: 1.5, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${progress}%`, background: C.green, borderRadius: 1.5, boxShadow: `0 0 8px ${C.greenFaint}`, transition: "width 1s linear" }} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 10, color: C.textMuted }}>
+          <span>{epochStart > 0 ? new Date(epochStart * 1000).toUTCString().slice(17, 25) + ' UTC' : '---'}</span>
+          <span>{epochEnd > 0 ? new Date(epochEnd * 1000).toUTCString().slice(17, 25) + ' UTC' : '---'}</span>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function Leaderboard({ data }) {
+  const total = data?.totalCredits || 0;
+  return (
+    <Panel title="Mining Leaderboard" style={{ flex: 1, display: "flex", flexDirection: "column" }} headerRight={
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ fontSize: 10, color: C.textDim }}>{data?.totalMiners || 0} miners · {total} credits</span>
+        <span style={{ fontSize: 9, color: C.green, animation: "blink 1.5s infinite" }}>● LIVE</span>
+      </div>
+    }>
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+              {["#", "WALLET", "CREDITS", "RECEIPTS", "SHARE"].map(h => (
+                <th key={h} style={{ padding: "8px 10px", textAlign: h === "WALLET" || h === "#" ? "left" : "right", fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", color: C.textMuted, whiteSpace: "nowrap" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(data?.leaderboard || []).map((miner, i) => {
+              const share = total > 0 ? ((miner.credits / total) * 100).toFixed(1) : '0';
+              const rankColor = i === 0 ? "#ffd700" : i === 1 ? "#c0c0c0" : i === 2 ? "#cd7f32" : C.textMuted;
+              return (
+                <tr key={miner.address} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.008)" }}>
+                  <td style={{ padding: "8px 10px", color: rankColor, fontWeight: i < 3 ? 700 : 400, fontSize: i < 3 ? 12 : 11 }}>{i + 1}</td>
+                  <td style={{ padding: "8px 10px" }}>
+                    <a href={`https://basescan.org/address/${miner.address}`} target="_blank" rel="noopener noreferrer"
+                      style={{ color: C.textDim, textDecoration: "none", fontVariantNumeric: "tabular-nums" }}
+                      onMouseOver={e => e.target.style.color = C.cyan} onMouseOut={e => e.target.style.color = C.textDim}>
+                      {truncAddr(miner.address)}
+                    </a>
+                  </td>
+                  <td style={{ padding: "8px 10px", textAlign: "right", color: C.text, fontWeight: 600 }}>{miner.credits.toLocaleString()}</td>
+                  <td style={{ padding: "8px 10px", textAlign: "right", color: C.textDim }}>{miner.txCount.toLocaleString()}</td>
+                  <td style={{ padding: "8px 10px", textAlign: "right", color: C.textDim }}>{share}%</td>
+                </tr>
+              );
+            })}
+            {(!data || data.leaderboard.length === 0) && (
+              <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", color: C.textMuted }}>
+                {data ? 'No mining activity this epoch yet' : 'Loading...'}
+              </td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  );
+}
+
+function MarketPanel({ price, stats }) {
+  const change = price?.change24h || 0;
+  return (
+    <Panel title="Market Data">
+      <div style={{ padding: 14 }}>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 9, color: C.textMuted, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>BOTCOIN PRICE</div>
+          <GlowText color={C.text} style={{ fontSize: 20, fontWeight: 700 }}>${price ? parseFloat(price.price).toFixed(8) : '---'}</GlowText>
+          {price && <div style={{ fontSize: 11, color: change >= 0 ? C.green : C.red, marginTop: 4 }}>{change >= 0 ? '↑' : '↓'} {Math.abs(change).toFixed(2)}% 24h</div>}
+        </div>
+        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+          {[
+            ['MCAP', price?.marketCap ? '$' + fmtNum(price.marketCap) : '---'],
+            ['VOL 24H', price?.volume24h ? '$' + fmtNum(price.volume24h) : '---'],
+            ['EPOCH REWARD', stats?.currentEpochEstimate ? fmtNum(stats.currentEpochEstimate) : '---'],
+            ['TOTAL MINED', stats?.totalMined ? fmtNum(stats.totalMined) : '---'],
+            ['ACTIVE MINERS', stats?.activeMiners?.toString() || '---'],
+          ].map(([label, value]) => (
+            <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 11 }}>
+              <span style={{ color: C.textMuted }}>{label}</span>
+              <span style={{ color: C.textDim }}>{value}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 8, marginTop: 8 }}>
+          <a href="https://agentmoney.net" target="_blank" style={{ color: C.textMuted, textDecoration: "none", fontSize: 10 }}
+            onMouseOver={e => e.target.style.color = C.cyan} onMouseOut={e => e.target.style.color = C.textMuted}>
+            agentmoney.net ↗
+          </a>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function App() {
+  const [stats, setStats] = useState(null);
+  const [epoch, setEpoch] = useState(null);
+  const [price, setPrice] = useState(null);
+  const [leaderboard, setLeaderboard] = useState(null);
+  const [connected, setConnected] = useState(false);
+
+  const fetchAll = useCallback(async () => {
+    try {
+      const [sRes, eRes] = await Promise.all([
+        fetch(`${COORDINATOR}/v1/stats`).then(r => r.json()),
+        fetch(`${COORDINATOR}/v1/epoch`).then(r => r.json()),
+      ]);
+      setStats(sRes);
+      setEpoch(eRes);
+      setConnected(true);
+    } catch { setConnected(false); }
+
+    try {
+      const pRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${BOTCOIN_CONTRACT}`);
+      const pData = await pRes.json();
+      const pair = pData.pairs?.[0];
+      if (pair) setPrice({ price: pair.priceUsd, change24h: pair.priceChange?.h24, volume24h: pair.volume?.h24, marketCap: pair.marketCap || pair.fdv });
+    } catch {}
+
+    // Leaderboard from on-chain
+    try {
+      const blockRes = await fetch(ALCHEMY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 }) });
+      const blockData = await blockRes.json();
+      const currentBlock = parseInt(blockData.result, 16);
+      
+      const epochEnd = epoch?.nextEpochStartTimestamp || 0;
+      const duration = parseInt(epoch?.epochDurationSeconds || '86400');
+      const epochStart = epochEnd - duration;
+      const now = Math.floor(Date.now() / 1000);
+      const blocksIntoEpoch = Math.floor((now - epochStart) / 2);
+      const fromBlock = Math.max(currentBlock - blocksIntoEpoch, 0);
+
+      const logsRes = await fetch(ALCHEMY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getLogs', params: [{ fromBlock: '0x' + fromBlock.toString(16), toBlock: 'latest', address: MINING_CONTRACT }], id: 2 }) });
+      const logsData = await logsRes.json();
+      const logs = logsData.result || [];
+
+      const minerMap = {};
+      for (const log of logs) {
+        if (log.topics?.length >= 2) {
+          const addr = '0x' + log.topics[1].slice(26).toLowerCase();
+          if (!minerMap[addr]) minerMap[addr] = { credits: 0, txCount: 0 };
+          let credits = 1;
+          if (log.data?.length >= 130) credits = parseInt(log.data.slice(66, 130), 16) || 1;
+          minerMap[addr].credits += credits;
+          minerMap[addr].txCount += 1;
+        }
+      }
+      const lb = Object.entries(minerMap).map(([address, d]) => ({ address, ...d })).sort((a, b) => b.credits - a.credits);
+      setLeaderboard({ epoch: epoch?.epochId, totalCredits: lb.reduce((s, m) => s + m.credits, 0), totalMiners: lb.length, leaderboard: lb.slice(0, 100) });
+    } catch {}
+  }, [epoch?.nextEpochStartTimestamp]);
+
+  useEffect(() => { fetchAll(); const i = setInterval(fetchAll, 30000); return () => clearInterval(i); }, [fetchAll]);
+
+  return (
+    <div style={{ fontFamily: "'IBM Plex Mono', 'Fira Code', monospace", background: C.bg, color: C.text, minHeight: "100vh", fontSize: 12 }}>
+      <Scanline />
+      <StatusBar stats={stats} epoch={epoch} price={price} connected={connected} />
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 8, padding: 12, height: "calc(100vh - 50px)" }}>
+        {/* Left column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, overflow: "hidden" }}>
+          {/* Metrics row */}
+          <div style={{ display: "flex", gap: 8 }}>
+            <MetricBox label="Active Miners" value={stats?.activeMiners?.toString() || '---'} color={C.amber} />
+            <MetricBox label="Current Epoch" value={`#${epoch?.epochId || '?'}`} color={C.cyan} />
+            <MetricBox label="Epoch Reward (Est.)" value={stats?.currentEpochEstimate ? fmtNum(stats.currentEpochEstimate) : '---'} sub="BOTCOIN" color={C.green} />
+            <MetricBox label="Total Mined" value={stats?.totalMined ? fmtNum(stats.totalMined) : '---'} sub="BOTCOIN" color={C.text} />
+          </div>
+          {/* Countdown */}
+          <EpochCountdown epoch={epoch} />
+          {/* Leaderboard */}
+          <Leaderboard data={leaderboard} />
+        </div>
+        {/* Right column */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <MarketPanel price={price} stats={stats} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
