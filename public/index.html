@@ -24,9 +24,9 @@ body { background: #0a0a0a; color: #e0e0e0; font-family: 'IBM Plex Mono', 'Fira 
 const { useState, useEffect, useCallback } = React;
 
 const COORDINATOR = 'https://coordinator.agentmoney.net';
+const AVC_API = 'https://botcoin.avc.codes/api';
 const BOTCOIN_CONTRACT = '0xA601877977340862Ca67f816eb079958E5bd0BA3';
-const MINING_CONTRACT = '0xd572e61e1B627d4105832C815Ccd722B5baD9233';
-const ALCHEMY_URL = 'https://base-mainnet.g.alchemy.com/v2/Njbz8cn6hHtnlMHEGxpWB';
+const DEX_PAIR = '0x5154ba0d6cfb5fe27644bc856064991e1c7672b7eb533d5d457db4c7144c2af5';
 
 const C = {
   bg: "#0a0a0a", panel: "#0d0d0d", border: "#1a1a1a", borderHover: "#2a2a2a",
@@ -162,7 +162,7 @@ function Leaderboard({ data }) {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-              {["#", "WALLET", "CREDITS", "RECEIPTS", "SHARE"].map(h => (
+              {["#", "WALLET", "EPOCH CREDITS", "TOTAL CREDITS", "SOLVES", "SHARE"].map(h => (
                 <th key={h} style={{ padding: "8px 10px", textAlign: h === "WALLET" || h === "#" ? "left" : "right", fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", color: C.textMuted, whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
@@ -182,13 +182,14 @@ function Leaderboard({ data }) {
                     </a>
                   </td>
                   <td style={{ padding: "8px 10px", textAlign: "right", color: C.text, fontWeight: 600 }}>{miner.credits.toLocaleString()}</td>
+                  <td style={{ padding: "8px 10px", textAlign: "right", color: C.textDim }}>{(miner.totalCredits || 0).toLocaleString()}</td>
                   <td style={{ padding: "8px 10px", textAlign: "right", color: C.textDim }}>{miner.txCount.toLocaleString()}</td>
                   <td style={{ padding: "8px 10px", textAlign: "right", color: C.textDim }}>{share}%</td>
                 </tr>
               );
             })}
             {(!data || data.leaderboard.length === 0) && (
-              <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", color: C.textMuted }}>
+              <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: C.textMuted }}>
                 {data ? 'No mining activity this epoch yet' : 'Loading...'}
               </td></tr>
             )}
@@ -242,57 +243,46 @@ function App() {
   const [connected, setConnected] = useState(false);
 
   const fetchAll = useCallback(async () => {
+    // Stats + Epoch from coordinator
     try {
-      const [sRes, eRes] = await Promise.all([
+      const [sRes, eRes, avcRes] = await Promise.all([
         fetch(`${COORDINATOR}/v1/stats`).then(r => r.json()),
         fetch(`${COORDINATOR}/v1/epoch`).then(r => r.json()),
+        fetch(`${AVC_API}/stats`).then(r => r.json()),
       ]);
-      setStats(sRes);
+      setStats({ ...sRes, currentEpochTotalCredits: avcRes.currentEpochTotalCredits });
       setEpoch(eRes);
       setConnected(true);
     } catch { setConnected(false); }
 
+    // Price from DexScreener
     try {
-      const pRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${BOTCOIN_CONTRACT}`);
+      const pRes = await fetch(`https://api.dexscreener.com/latest/dex/pairs/base/${DEX_PAIR}`);
       const pData = await pRes.json();
-      const pair = pData.pairs?.[0];
+      const pair = pData.pair;
       if (pair) setPrice({ price: pair.priceUsd, change24h: pair.priceChange?.h24, volume24h: pair.volume?.h24, marketCap: pair.marketCap || pair.fdv });
     } catch {}
 
-    // Leaderboard from on-chain
+    // Leaderboard from avc.codes API (they aggregate on-chain data)
     try {
-      const blockRes = await fetch(ALCHEMY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 }) });
-      const blockData = await blockRes.json();
-      const currentBlock = parseInt(blockData.result, 16);
-      
-      const epochEnd = epoch?.nextEpochStartTimestamp || 0;
-      const duration = parseInt(epoch?.epochDurationSeconds || '86400');
-      const epochStart = epochEnd - duration;
-      const now = Math.floor(Date.now() / 1000);
-      const blocksIntoEpoch = Math.floor((now - epochStart) / 2);
-      const fromBlock = Math.max(currentBlock - blocksIntoEpoch, 0);
-
-      const logsRes = await fetch(ALCHEMY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_getLogs', params: [{ fromBlock: '0x' + fromBlock.toString(16), toBlock: 'latest', address: MINING_CONTRACT }], id: 2 }) });
-      const logsData = await logsRes.json();
-      const logs = logsData.result || [];
-
-      const minerMap = {};
-      for (const log of logs) {
-        if (log.topics?.length >= 2) {
-          const addr = '0x' + log.topics[1].slice(26).toLowerCase();
-          if (!minerMap[addr]) minerMap[addr] = { credits: 0, txCount: 0 };
-          let credits = 1;
-          if (log.data?.length >= 130) credits = parseInt(log.data.slice(66, 130), 16) || 1;
-          minerMap[addr].credits += credits;
-          minerMap[addr].txCount += 1;
-        }
-      }
-      const lb = Object.entries(minerMap).map(([address, d]) => ({ address, ...d })).sort((a, b) => b.credits - a.credits);
-      setLeaderboard({ epoch: epoch?.epochId, totalCredits: lb.reduce((s, m) => s + m.credits, 0), totalMiners: lb.length, leaderboard: lb.slice(0, 100) });
+      const lbRes = await fetch(`${AVC_API}/leaderboard`);
+      const lbData = await lbRes.json();
+      const miners = lbData.miners || [];
+      const totalCredits = miners.reduce((s, m) => s + parseInt(m.currentEpochCredits || 0), 0);
+      setLeaderboard({
+        epoch: lbData.epochId || epoch?.epochId,
+        totalCredits,
+        totalMiners: miners.filter(m => parseInt(m.currentEpochCredits) > 0).length,
+        leaderboard: miners.filter(m => parseInt(m.currentEpochCredits) > 0).map(m => ({
+          address: m.address,
+          credits: parseInt(m.currentEpochCredits),
+          txCount: parseInt(m.totalSolves || m.currentEpochCredits),
+          totalCredits: parseInt(m.totalCredits),
+          estimateReward: m.estimateReward,
+        }))
+      });
     } catch {}
-  }, [epoch?.nextEpochStartTimestamp]);
+  }, []);
 
   useEffect(() => { fetchAll(); const i = setInterval(fetchAll, 30000); return () => clearInterval(i); }, [fetchAll]);
 
