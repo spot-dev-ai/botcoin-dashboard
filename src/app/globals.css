@@ -60,6 +60,7 @@ body {
   right: 0;
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--green-dim), transparent);
+  z-index: 20;
 }
 
 .term-card:hover {
@@ -185,4 +186,13 @@ body {
 }
 .countdown-sep {
   animation: countdown-pulse 1s step-end infinite;
+}
+
+/* Sparkline fade-in */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 1.5s ease-out forwards;
 }

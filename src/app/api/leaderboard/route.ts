@@ -1,110 +1,251 @@
 import { NextResponse } from 'next/server'
 
-const ALCHEMY_URL = 'https://base-mainnet.g.alchemy.com/v2/Njbz8cn6hHtnlMHEGxpWB'
+const ALCHEMY_URL = `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
 const MINING_CONTRACT = '0xd572e61e1B627d4105832C815Ccd722B5baD9233'
 const COORDINATOR = 'https://coordinator.agentmoney.net'
+const AVC_API = 'https://botcoin.avc.codes/api/leaderboard'
 
-// ReceiptSubmitted event signature — we'll get all receipt events and count per miner
-// Event: ReceiptSubmitted(address indexed miner, uint256 indexed epochId, bytes32 challengeId, uint256 credits)
-const RECEIPT_TOPIC = '0x' + Buffer.from(
-  Array.from(
-    new Uint8Array(
-      // keccak256 of the event sig — we'll compute from logs instead
-      // For now use getLogs with the contract and parse topics
-      []
-    )
-  )
-).toString('hex')
+// --- In-memory cache for miner addresses (refreshed every 5 min) ---
+let cachedAddresses: string[] = []
+let cachedTotalCredits = new Map<string, string>()
+let addressCacheTime = 0
+const ADDRESS_CACHE_TTL = 5 * 60 * 1000 // 5 min
 
-interface MinerCredits {
+// --- Leaderboard cache (refreshed every 30s) ---
+interface MinerData {
   address: string
-  credits: number
-  txCount: number
+  totalCredits: string
+  totalSolves: string
+  currentEpochCredits: string
+  estimateReward: string
 }
+let cachedLeaderboard: MinerData[] = []
+let leaderboardCacheTime = 0
+const LEADERBOARD_CACHE_TTL = 45 * 1000 // 45s
 
-export async function GET() {
+async function ethCall(data: string): Promise<string | null> {
   try {
-    // Get current epoch info
-    const epochRes = await fetch(`${COORDINATOR}/v1/epoch`, { next: { revalidate: 30 } })
-    const epoch = await epochRes.json()
-    
-    // Calculate block range for current epoch
-    // Base produces ~2s blocks
-    const epochStart = parseInt(epoch.nextEpochStartTimestamp) - parseInt(epoch.epochDurationSeconds)
-    const now = Math.floor(Date.now() / 1000)
-    const secondsIntoEpoch = now - epochStart
-    const blocksIntoEpoch = Math.floor(secondsIntoEpoch / 2)
-    
-    // Get current block number
-    const blockNumRes = await fetch(ALCHEMY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 }),
-    })
-    const blockNumData = await blockNumRes.json()
-    const currentBlock = parseInt(blockNumData.result, 16)
-    const fromBlock = Math.max(currentBlock - blocksIntoEpoch, 0)
-
-    // Get all logs from the mining contract for this epoch
-    const logsRes = await fetch(ALCHEMY_URL, {
+    const res = await fetch(ALCHEMY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'eth_getLogs',
-        params: [{
-          fromBlock: '0x' + fromBlock.toString(16),
-          toBlock: 'latest',
-          address: MINING_CONTRACT,
-        }],
-        id: 2,
+        jsonrpc: '2.0', method: 'eth_call',
+        params: [{ to: MINING_CONTRACT, data }, 'latest'], id: 1,
       }),
     })
-    const logsData = await logsRes.json()
-    const logs = logsData.result || []
+    const json = await res.json()
+    return json.result || null
+  } catch { return null }
+}
 
-    // Aggregate by miner address (topic[1] is typically the miner)
-    const minerMap = new Map<string, { credits: number; txCount: number }>()
-    
-    for (const log of logs) {
-      if (log.topics && log.topics.length >= 2) {
-        // Extract miner address from topic[1] (indexed address, padded to 32 bytes)
-        const minerAddr = '0x' + log.topics[1].slice(26).toLowerCase()
-        const existing = minerMap.get(minerAddr) || { credits: 0, txCount: 0 }
-        
-        // Each receipt = 1 credit (for 25M tier), parse data for actual credits if available
-        let credits = 1
-        if (log.data && log.data.length >= 66) {
-          // Try to parse credits from data field (last uint256)
-          const dataHex = log.data.slice(2)
-          if (dataHex.length >= 128) {
-            credits = parseInt(dataHex.slice(64, 128), 16) || 1
-          }
-        }
-        
-        existing.credits += credits
-        existing.txCount += 1
-        minerMap.set(minerAddr, existing)
+// Batch eth_call using Alchemy's batch JSON-RPC
+async function ethCallBatch(calls: { data: string; id: number }[]): Promise<Map<number, string>> {
+  const results = new Map<number, string>()
+  if (calls.length === 0) return results
+
+  // Split into chunks of 50 to avoid rate limits
+  const chunks = []
+  for (let i = 0; i < calls.length; i += 50) {
+    chunks.push(calls.slice(i, i + 50))
+  }
+
+  for (const chunk of chunks) {
+    try {
+      const res = await fetch(ALCHEMY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chunk.map(c => ({
+          jsonrpc: '2.0', method: 'eth_call',
+          params: [{ to: MINING_CONTRACT, data: c.data }, 'latest'],
+          id: c.id,
+        }))),
+      })
+      const json = await res.json()
+      for (const r of json) {
+        if (r.result) results.set(r.id, r.result)
       }
+    } catch {}
+  }
+  return results
+}
+
+async function fetchMinerAddresses(): Promise<string[]> {
+  const now = Date.now()
+  if (cachedAddresses.length > 0 && now - addressCacheTime < ADDRESS_CACHE_TTL) {
+    return cachedAddresses
+  }
+
+  // Fetch all addresses + totalCredits from avc.codes (paginated)
+  const addresses: string[] = []
+  const credits = new Map<string, string>()
+  let page = 1
+  const limit = 100
+
+  while (true) {
+    try {
+      const res = await fetch(`${AVC_API}?page=${page}&limit=${limit}&sortBy=totalCredits&sortOrder=desc`)
+      const data = await res.json()
+      if (!data.miners || data.miners.length === 0) break
+      for (const m of data.miners) {
+        const addr = m.address.toLowerCase()
+        addresses.push(addr)
+        if (m.totalCredits) credits.set(addr, String(m.totalCredits))
+      }
+      if (!data.pagination || page >= data.pagination.pages) break
+      page++
+    } catch {
+      break
+    }
+  }
+
+  if (addresses.length > 0) {
+    cachedAddresses = addresses
+    cachedTotalCredits = credits
+    addressCacheTime = now
+  }
+  return cachedAddresses
+}
+
+async function buildLeaderboard(): Promise<{ miners: MinerData[]; source: string; epochId: number }> {
+  const now = Date.now()
+  
+  // Get current epoch
+  const epochResult = await ethCall('0x76671808') // currentEpoch()
+  const epochId = epochResult ? parseInt(epochResult, 16) : 4
+  const epochHex = epochId.toString(16).padStart(64, '0')
+
+  // Get miner addresses
+  const addresses = await fetchMinerAddresses()
+  if (addresses.length === 0) {
+    throw new Error('No miner addresses available')
+  }
+
+  // Get on-chain totalCredits for epoch
+  const totalCreditsResult = await ethCall('0x15a4d1e4' + epochHex)
+  const epochTotalCredits = totalCreditsResult ? parseInt(totalCreditsResult, 16) : 0
+
+  // Get epoch reward estimate from coordinator
+  let epochRewardRaw = '0'
+  try {
+    const statsRes = await fetch(`${COORDINATOR}/v1/stats`)
+    const stats = await statsRes.json()
+    epochRewardRaw = stats.currentEpochEstimateRaw || '0'
+  } catch {}
+
+  // Batch on-chain calls: credits(epoch, addr) + nextIndex(addr) for each miner
+  const calls: { data: string; id: number }[] = []
+  for (let i = 0; i < addresses.length; i++) {
+    const addrPadded = addresses[i].slice(2).padStart(64, '0')
+    // credits(uint64 epoch, address miner) — selector 0xc8d11fd7
+    calls.push({ data: '0xc8d11fd7' + epochHex + addrPadded, id: i * 2 })
+    // nextIndex(address) — selector 0x641ce41d (total solves across all epochs)
+    calls.push({ data: '0x641ce41d' + addrPadded, id: i * 2 + 1 })
+  }
+
+  const results = await ethCallBatch(calls)
+
+  // Use avc.codes bulk data for totalCredits (already fetched during address discovery)
+  // This avoids N individual coordinator calls which was the main bottleneck
+
+  // Build miner data
+  const miners: MinerData[] = []
+  const epochReward = BigInt(epochRewardRaw)
+
+  for (let i = 0; i < addresses.length; i++) {
+    const addr = addresses[i]
+    const epochCreditsHex = results.get(i * 2)
+    const totalSolvesHex = results.get(i * 2 + 1)
+
+    const epochCredits = epochCreditsHex ? parseInt(epochCreditsHex, 16) : 0
+    const totalSolves = totalSolvesHex ? parseInt(totalSolvesHex, 16) : 0
+    const totalCredits = cachedTotalCredits.get(addr) || String(epochCredits)
+
+    // Estimate reward: (minerEpochCredits / totalEpochCredits) * epochReward
+    let estimateReward = '0'
+    if (epochTotalCredits > 0 && epochCredits > 0) {
+      estimateReward = (epochReward * BigInt(epochCredits) / BigInt(epochTotalCredits)).toString()
     }
 
-    // Sort by credits descending
-    const leaderboard: MinerCredits[] = Array.from(minerMap.entries())
-      .map(([address, data]) => ({ address, ...data }))
-      .sort((a, b) => b.credits - a.credits)
+    if (parseInt(totalCredits) > 0 || totalSolves > 0) {
+      miners.push({
+        address: addr,
+        totalCredits,
+        totalSolves: String(totalSolves),
+        currentEpochCredits: String(epochCredits),
+        estimateReward,
+      })
+    }
+  }
 
-    const totalCredits = leaderboard.reduce((sum, m) => sum + m.credits, 0)
+  return { miners, source: 'onchain+coordinator', epochId }
+}
+
+export const revalidate = 0 // dynamic
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50')))
+  const sortBy = searchParams.get('sortBy') || 'currentEpochCredits'
+  const sortOrder = searchParams.get('sortOrder') || 'desc'
+  const search = searchParams.get('search')?.toLowerCase()
+
+  try {
+    const now = Date.now()
+
+    // Use cache if fresh
+    let miners: MinerData[]
+    let source = 'cache'
+    let epochId = 0
+
+    if (cachedLeaderboard.length > 0 && now - leaderboardCacheTime < LEADERBOARD_CACHE_TTL) {
+      miners = [...cachedLeaderboard]
+    } else {
+      const result = await buildLeaderboard()
+      miners = result.miners
+      source = result.source
+      epochId = result.epochId
+      cachedLeaderboard = miners
+      leaderboardCacheTime = now
+    }
+
+    // Search filter
+    if (search) {
+      miners = miners.filter(m => m.address.includes(search))
+    }
+
+    // Sort
+    const sortKey = sortBy as keyof MinerData
+    miners.sort((a, b) => {
+      const av = BigInt(a[sortKey] || '0')
+      const bv = BigInt(b[sortKey] || '0')
+      return sortOrder === 'desc' ? (bv > av ? 1 : bv < av ? -1 : 0) : (av > bv ? 1 : av < bv ? -1 : 0)
+    })
+
+    // Add ranks
+    const total = miners.length
+    const pages = Math.ceil(total / limit)
+    const start = (page - 1) * limit
+    const paged = miners.slice(start, start + limit).map((m, i) => ({
+      rank: start + i + 1,
+      ...m,
+    }))
 
     return NextResponse.json({
-      epoch: epoch.epochId,
-      totalCredits,
-      totalMiners: leaderboard.length,
-      totalLogs: logs.length,
-      fromBlock,
-      currentBlock,
-      leaderboard: leaderboard.slice(0, 100), // Top 100
+      miners: paged,
+      pagination: { page, limit, total, pages },
+      source,
     })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to fetch leaderboard' }, { status: 500 })
+    // Fallback: avc.codes
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: String(limit), sortBy, sortOrder })
+      if (search) params.set('search', search)
+      const res = await fetch(`${AVC_API}?${params}`)
+      const data = await res.json()
+      return NextResponse.json({ ...data, source: 'avc-fallback' })
+    } catch {
+      return NextResponse.json({ error: 'All data sources failed' }, { status: 500 })
+    }
   }
 }
