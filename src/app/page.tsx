@@ -166,9 +166,10 @@ export default function Home() {
     setPage(1)
   }
 
-  // Countdown
-  const epochEnd = stats?.nextEpochStartTimestamp ?? 0
-  const epochStart = stats?.epochStartTimestamp ?? 0
+  // Countdown — only compute when stats are loaded (avoids 00:00:00 flash)
+  const hasEpochData = stats !== null && stats.nextEpochStartTimestamp > 0
+  const epochEnd = stats?.nextEpochStartTimestamp ?? now
+  const epochStart = stats?.epochStartTimestamp ?? now
   const epochDuration = parseInt(stats?.epochDurationSeconds ?? '86400')
   const remaining = Math.max(0, epochEnd - now)
   const elapsed = Math.max(0, now - epochStart)
@@ -241,7 +242,7 @@ export default function Home() {
             </div>
             <div className="text-center py-4" style={{ marginTop: '-30px' }}>
               <div className="text-5xl font-bold glow-green text-green tracking-[0.15em]">
-                {pad(h)}<span className="countdown-sep text-[#555]">:</span>{pad(m)}<span className="countdown-sep text-[#555]">:</span>{pad(s)}
+                {hasEpochData ? <>{pad(h)}<span className="countdown-sep text-[#555]">:</span>{pad(m)}<span className="countdown-sep text-[#555]">:</span>{pad(s)}</> : <span className="text-[#555]">--:--:--</span>}
               </div>
             </div>
             <div className="progress-bar mt-4">
