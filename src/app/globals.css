@@ -5,9 +5,9 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --bg-primary: #0a0a0a;
+  --bg-primary: rgb(2, 2, 2);
   --bg-secondary: #0f0f0f;
-  --bg-card: #111111;
+  --bg-card: #060606;
   --bg-card-hover: #161616;
   --bg-elevated: #1a1a1a;
   --border-subtle: rgba(255, 255, 255, 0.04);

@@ -159,9 +159,9 @@ export default function Home() {
   const change24h = price?.change24h ?? 0
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] scanlines">
-      <nav className="border-b border-white/[0.04] bg-[#0a0a0a]/90 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 h-11 flex items-center justify-between">
+    <div className="min-h-screen bg-[rgb(2,2,2)] scanlines">
+      <nav className="border-b border-white/[0.04] bg-[rgb(2,2,2)]/90 backdrop-blur sticky top-0 z-50">
+        <div className="max-w-[82rem] mx-auto px-4 h-11 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-green text-xs">▶</span>
             <span className="text-xs font-medium text-[#e0e0e0]">BOTCOIN</span>
@@ -180,7 +180,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+      <main className="max-w-[82rem] mx-auto px-4 py-6 space-y-4">
         {/* Stats row */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <StatBox label="MINERS" value={stats?.activeMiners?.toString() ?? '---'} />
@@ -196,11 +196,13 @@ export default function Home() {
             sub={stats && priceNum ? formatUsd(stats.estimatedEpochReward, priceNum) : undefined}
             valueColor="text-green"
           />
-          <PriceBox
-            price={priceNum}
-            change24h={change24h}
-            history={price?.history}
-          />
+          <div className="col-span-2 lg:col-span-1">
+            <PriceBox
+              price={priceNum}
+              change24h={change24h}
+              history={price?.history}
+            />
+          </div>
         </div>
 
         {/* Epoch countdown */}
@@ -251,7 +253,7 @@ export default function Home() {
                 placeholder="search by address..."
                 value={searchInput}
                 onChange={e => { const v = e.target.value; setSearchInput(v); setSearch(v.trim().toLowerCase()); setPage(1) }}
-                className="w-full bg-[#111] border border-white/[0.06] rounded px-3 py-1.5 text-xs text-[#888] placeholder:text-[#333] focus:outline-none focus:border-[#00ff88]/30"
+                className="w-full bg-[#060606] border border-white/[0.06] rounded px-3 py-1.5 text-xs text-[#888] placeholder:text-[#333] focus:outline-none focus:border-[#00ff88]/30"
               />
             </div>
 
@@ -382,7 +384,7 @@ export default function Home() {
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to left, transparent -10%, rgb(17, 17, 17) 65%)' }} />
+                    <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to left, transparent -10%, rgb(6, 6, 6) 65%)' }} />
                   </>
                 )}
                 <div className="relative z-10">
@@ -451,7 +453,7 @@ function PriceBox({ price, change24h, history }: {
       {/* Sparkline behind text */}
       {chartData && (
         <div className="absolute inset-0 flex items-end">
-          <div className="w-full h-full opacity-0 animate-fade-in" style={{ width: '70%', marginLeft: '30%' }}>
+          <div className="w-full opacity-0 animate-fade-in" style={{ width: '70%', marginLeft: '30%', height: '85%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                 <defs>
@@ -460,9 +462,9 @@ function PriceBox({ price, change24h, history }: {
                     <stop offset="100%" stopColor="#00ff88" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="sparkFadeRight" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#0a0a0a" stopOpacity={0} />
-                    <stop offset="60%" stopColor="#0a0a0a" stopOpacity={0} />
-                    <stop offset="100%" stopColor="#0a0a0a" stopOpacity={0.95} />
+                    <stop offset="0%" stopColor="rgb(2,2,2)" stopOpacity={0} />
+                    <stop offset="60%" stopColor="rgb(2,2,2)" stopOpacity={0} />
+                    <stop offset="100%" stopColor="rgb(2,2,2)" stopOpacity={0.95} />
                   </linearGradient>
                 </defs>
                 <YAxis domain={['dataMin', 'dataMax']} hide />
@@ -483,7 +485,7 @@ function PriceBox({ price, change24h, history }: {
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: 'linear-gradient(to left, transparent -10%, rgb(17, 17, 17) 65%)',
+              background: 'linear-gradient(to left, transparent -10%, rgb(6, 6, 6) 65%)',
             }}
           />
         </div>
