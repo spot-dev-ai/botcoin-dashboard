@@ -361,7 +361,7 @@ export default function Home() {
                 {/* Sidebar sparkline */}
                 {price?.history && price.history.length > 1 && (
                   <>
-                    <div className="absolute inset-0 opacity-0 animate-fade-in" style={{ width: '70%', marginLeft: '30%', height: '85%' }}>
+                    <div className="absolute inset-0 opacity-0 animate-fade-in" style={{ width: '70%', marginLeft: '30%', height: '85%', top: '15%' }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={price.history} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                           <defs>
