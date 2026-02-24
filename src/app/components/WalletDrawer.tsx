@@ -27,8 +27,8 @@ function formatBotcoin(raw: string): string {
   try {
     const n = BigInt(raw)
     const whole = n / BigInt(1e18)
-    if (whole >= 1_000_000n) return (Number(whole) / 1e6).toFixed(2) + 'M'
-    if (whole >= 1_000n) return (Number(whole) / 1e3).toFixed(2) + 'K'
+    if (whole >= BigInt(1_000_000)) return (Number(whole) / 1e6).toFixed(2) + 'M'
+    if (whole >= BigInt(1_000)) return (Number(whole) / 1e3).toFixed(2) + 'K'
     return whole.toString()
   } catch { return '---' }
 }

@@ -43,9 +43,9 @@ function formatBotcoin(raw: string): string {
   try {
     const n = BigInt(raw)
     const whole = n / BigInt(1e18)
-    if (whole >= 1_000_000_000n) return (Number(whole) / 1e9).toFixed(2) + 'B'
-    if (whole >= 1_000_000n) return (Number(whole) / 1e6).toFixed(2) + 'M'
-    if (whole >= 1_000n) return (Number(whole) / 1e3).toFixed(2) + 'K'
+    if (whole >= BigInt(1_000_000_000)) return (Number(whole) / 1e9).toFixed(2) + 'B'
+    if (whole >= BigInt(1_000_000)) return (Number(whole) / 1e6).toFixed(2) + 'M'
+    if (whole >= BigInt(1_000)) return (Number(whole) / 1e3).toFixed(2) + 'K'
     return whole.toString()
   } catch {
     const n = parseFloat(raw)
@@ -295,7 +295,7 @@ export default function Home() {
                           </span>
                         </td>
                         <td className="text-right">
-                          {reward > 0n ? (
+                          {reward > BigInt(0) ? (
                             <span className="text-green">
                               {formatBotcoin(miner.estimateReward)}
                               {priceNum > 0 && (
