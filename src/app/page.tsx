@@ -76,10 +76,23 @@ function truncAddr(a: string): string {
   return a.slice(0, 6) + '···' + a.slice(-4)
 }
 
+function getInitialCache() {
+  if (typeof window === 'undefined') return { stats: null, price: null, lb: null }
+  try {
+    const cached = localStorage.getItem('botcoin-cache')
+    if (cached) {
+      const { stats, price, lb } = JSON.parse(cached)
+      return { stats: stats || null, price: price || null, lb: lb || null }
+    }
+  } catch {}
+  return { stats: null, price: null, lb: null }
+}
+
 export default function Home() {
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [price, setPrice] = useState<PriceData | null>(null)
-  const [lb, setLb] = useState<LeaderboardData | null>(null)
+  const initial = getInitialCache()
+  const [stats, setStats] = useState<Stats | null>(initial.stats)
+  const [price, setPrice] = useState<PriceData | null>(initial.price)
+  const [lb, setLb] = useState<LeaderboardData | null>(initial.lb)
   const [now, setNow] = useState(Math.floor(Date.now() / 1000))
   const [lastUpdate, setLastUpdate] = useState('')
   const [page, setPage] = useState(1)
