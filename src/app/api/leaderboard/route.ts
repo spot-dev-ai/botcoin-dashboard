@@ -248,7 +248,8 @@ export async function GET(request: Request) {
       pagination: { page, limit, total, pages },
       source,
     })
-    resp.headers.set('Cache-Control', 's-maxage=30, stale-while-revalidate=60')
+    // Aggressive CDN caching: serve stale for up to 5 min while revalidating in background
+    resp.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300')
     return resp
   } catch (error: any) {
     // Fallback: avc.codes
