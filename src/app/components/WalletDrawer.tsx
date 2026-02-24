@@ -101,16 +101,20 @@ export default function WalletDrawer({
 }) {
   const [data, setData] = useState<WalletData | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!address || !open) return
     setLoading(true)
     setData(null)
-    fetch(`/api/wallet?address=${address}`)
-      .then(r => r.json())
-      .then(d => { if (!d.error) setData(d) })
-      .catch(() => {})
+    setError(null)
+    const controller = new AbortController()
+    fetch(`/api/wallet?address=${address}`, { signal: controller.signal })
+      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() })
+      .then(d => { if (d.error) throw new Error(d.error); setData(d) })
+      .catch(e => { if (e.name !== 'AbortError') setError(e.message || 'failed') })
       .finally(() => setLoading(false))
+    return () => controller.abort()
   }, [address, open])
 
   return (
@@ -118,7 +122,7 @@ export default function WalletDrawer({
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/60 z-40" />
         <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 outline-none flex justify-center">
-          <div className="bg-[#0a0a0a] border-t border-white/[0.06] rounded-t-xl max-h-[85vh] overflow-y-auto w-full" style={{ maxWidth: 'calc(72rem + 40px)' }}>
+          <div className="bg-[rgb(2,2,2)] border-t border-white/[0.06] rounded-t-xl max-h-[85vh] overflow-y-auto w-full" style={{ maxWidth: 'calc(72rem + 40px)' }}>
             {/* Handle */}
             <div className="flex justify-center pt-3 pb-2">
               <div className="w-10 h-1 rounded-full bg-[#333]" />
@@ -152,6 +156,13 @@ export default function WalletDrawer({
 
               {loading && (
                 <div className="text-center py-12 text-[#555] text-xs">loading...</div>
+              )}
+
+              {error && !loading && (
+                <div className="text-center py-12 text-[#555] text-xs">
+                  <span className="text-red">error: {error}</span>
+                  <button onClick={() => { setError(null); setLoading(true); setData(null); fetch(`/api/wallet?address=${address}`).then(r=>r.json()).then(d=>{if(!d.error)setData(d);else setError(d.error)}).catch(e=>setError(e.message)).finally(()=>setLoading(false)) }} className="block mx-auto mt-2 text-[#555] hover:text-white transition-colors">retry</button>
+                </div>
               )}
 
               {data && (
@@ -217,7 +228,7 @@ export default function WalletDrawer({
 
 function MiniStat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div className="bg-[#111] border border-white/[0.04] rounded p-3">
+    <div className="bg-[#060606] border border-white/[0.04] rounded p-3">
       <div className="text-[10px] text-[#555] uppercase tracking-wider mb-1">{label}</div>
       <div className={`text-sm font-bold ${color || 'text-[#e0e0e0]'}`}>{value}</div>
     </div>

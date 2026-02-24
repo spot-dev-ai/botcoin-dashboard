@@ -47,7 +47,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No pair found' }, { status: 404 })
     }
 
-    return NextResponse.json({
+    const resp = NextResponse.json({
       price: pair.priceUsd,
       priceNative: pair.priceNative,
       change24h: pair.priceChange?.h24,
@@ -60,6 +60,8 @@ export async function GET() {
       dexId: pair.dexId,
       history: candles,
     })
+    resp.headers.set('Cache-Control', 's-maxage=15, stale-while-revalidate=30')
+    return resp
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch price' }, { status: 500 })
   }

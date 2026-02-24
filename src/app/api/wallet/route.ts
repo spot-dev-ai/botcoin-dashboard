@@ -26,6 +26,7 @@ async function ethCallBatch(calls: { data: string; id: number }[]): Promise<Map<
     const res = await fetch(ALCHEMY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(8000),
       body: JSON.stringify(calls.map(c => ({
         jsonrpc: '2.0', method: 'eth_call',
         params: [{ to: MINING_CONTRACT, data: c.data }, 'latest'],
@@ -40,6 +41,8 @@ async function ethCallBatch(calls: { data: string; id: number }[]): Promise<Map<
   return results
 }
 
+export const maxDuration = 15
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const address = searchParams.get('address')?.toLowerCase()
@@ -51,8 +54,8 @@ export async function GET(request: Request) {
   try {
     // Get coordinator data (per-epoch credits)
     const [coordRes, statsRes] = await Promise.all([
-      fetch(`${COORDINATOR}/v1/credits?miner=${address}`).then(r => r.json()).catch(() => null),
-      fetch(`${COORDINATOR}/v1/stats`).then(r => r.json()).catch(() => null),
+      fetch(`${COORDINATOR}/v1/credits?miner=${address}`, { signal: AbortSignal.timeout(5000) }).then(r => r.json()).catch(() => null),
+      fetch(`${COORDINATOR}/v1/stats`, { signal: AbortSignal.timeout(5000) }).then(r => r.json()).catch(() => null),
     ])
 
     const currentEpoch = parseInt(statsRes?.currentEpoch || '4')
@@ -118,7 +121,7 @@ export async function GET(request: Request) {
     const firstEpoch = epochHistory.find(e => e.credits > 0)?.epoch ?? null
     const maxCreditsInEpoch = Math.max(...epochHistory.map(e => e.credits), 0)
 
-    return NextResponse.json({
+    const resp = NextResponse.json({
       address,
       totalCredits,
       totalSolves,
@@ -131,6 +134,8 @@ export async function GET(request: Request) {
       epochHistory,
       activityGrid,
     })
+    resp.headers.set('Cache-Control', 's-maxage=30, stale-while-revalidate=60')
+    return resp
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to fetch wallet data' }, { status: 500 })
   }

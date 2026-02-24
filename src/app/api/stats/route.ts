@@ -22,13 +22,14 @@ async function ethCall(data: string): Promise<string | null> {
 }
 
 export const revalidate = 15
+export const maxDuration = 15
 
 export async function GET() {
   try {
     // Primary: coordinator + on-chain
     const [coordStats, coordEpoch, onChainEpoch, onChainGenesis, onChainDuration] = await Promise.all([
-      fetch(`${COORDINATOR}/v1/stats`).then(r => r.json()).catch(() => null),
-      fetch(`${COORDINATOR}/v1/epoch`).then(r => r.json()).catch(() => null),
+      fetch(`${COORDINATOR}/v1/stats`, { signal: AbortSignal.timeout(5000) }).then(r => r.json()).catch(() => null),
+      fetch(`${COORDINATOR}/v1/epoch`, { signal: AbortSignal.timeout(5000) }).then(r => r.json()).catch(() => null),
       ethCall('0x76671808'), // currentEpoch()
       ethCall('0xcacf66ab'), // genesisTimestamp()
       ethCall('0xa70b9f0c'), // EPOCH_DURATION()
@@ -51,7 +52,7 @@ export async function GET() {
     const epochStartTs = genesisTs + (epochId * epochDuration)
     const nextEpochStartTs = epochStartTs + epochDuration
 
-    return NextResponse.json({
+    const resp = NextResponse.json({
       activeMiners: coordStats?.activeMiners ?? 0,
       currentEpochId: String(epochId),
       currentEpochTotalCredits: String(totalCreditsOnChain ?? coordStats?.currentEpoch ?? 0),
@@ -64,6 +65,8 @@ export async function GET() {
       lastUpdated: coordStats?.lastUpdated || Math.floor(Date.now() / 1000),
       source: coordStats ? 'coordinator+onchain' : 'onchain-only',
     })
+    resp.headers.set('Cache-Control', 's-maxage=15, stale-while-revalidate=30')
+    return resp
   } catch (error) {
     // Fallback: avc.codes
     try {

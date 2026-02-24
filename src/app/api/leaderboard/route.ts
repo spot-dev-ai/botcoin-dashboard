@@ -54,6 +54,7 @@ async function ethCallBatch(calls: { data: string; id: number }[]): Promise<Map<
       const res = await fetch(ALCHEMY_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(8000),
         body: JSON.stringify(chunk.map(c => ({
           jsonrpc: '2.0', method: 'eth_call',
           params: [{ to: MINING_CONTRACT, data: c.data }, 'latest'],
@@ -83,7 +84,7 @@ async function fetchMinerAddresses(): Promise<string[]> {
 
   while (true) {
     try {
-      const res = await fetch(`${AVC_API}?page=${page}&limit=${limit}&sortBy=totalCredits&sortOrder=desc`)
+      const res = await fetch(`${AVC_API}?page=${page}&limit=${limit}&sortBy=totalCredits&sortOrder=desc`, { signal: AbortSignal.timeout(5000) })
       const data = await res.json()
       if (!data.miners || data.miners.length === 0) break
       for (const m of data.miners) {
@@ -180,7 +181,8 @@ async function buildLeaderboard(): Promise<{ miners: MinerData[]; source: string
   return { miners, source: 'onchain+coordinator', epochId }
 }
 
-export const revalidate = 0 // dynamic
+export const revalidate = 0
+export const maxDuration = 30
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -231,11 +233,13 @@ export async function GET(request: Request) {
       ...m,
     }))
 
-    return NextResponse.json({
+    const resp = NextResponse.json({
       miners: paged,
       pagination: { page, limit, total, pages },
       source,
     })
+    resp.headers.set('Cache-Control', 's-maxage=30, stale-while-revalidate=60')
+    return resp
   } catch (error: any) {
     // Fallback: avc.codes
     try {
