@@ -179,14 +179,16 @@ export default function Home() {
     setPage(1)
   }
 
-  // Countdown — only compute when stats are loaded (avoids 00:00:00 flash)
-  const hasEpochData = stats !== null && stats.nextEpochStartTimestamp > 0
-  const epochEnd = stats?.nextEpochStartTimestamp ?? now
-  const epochStart = stats?.epochStartTimestamp ?? now
-  const epochDuration = parseInt(stats?.epochDurationSeconds ?? '86400')
+  // Countdown — deterministic from genesis + duration (no API needed)
+  const GENESIS_TS = 1771549843
+  const EPOCH_DURATION = 86400
+  const currentEpochId = Math.floor((now - GENESIS_TS) / EPOCH_DURATION)
+  const epochStart = GENESIS_TS + (currentEpochId * EPOCH_DURATION)
+  const epochEnd = epochStart + EPOCH_DURATION
   const remaining = Math.max(0, epochEnd - now)
   const elapsed = Math.max(0, now - epochStart)
-  const progress = epochDuration > 0 ? Math.min(100, (elapsed / epochDuration) * 100) : 0
+  const progress = Math.min(100, (elapsed / EPOCH_DURATION) * 100)
+  const hasEpochData = true
   const h = Math.floor(remaining / 3600)
   const m = Math.floor((remaining % 3600) / 60)
   const s = remaining % 60
