@@ -108,19 +108,23 @@ export default function Home() {
     try {
       const params = new URLSearchParams({ page: String(page), limit: '200', sortBy, sortOrder })
 
-      const [s, p, l] = await Promise.all([
+      // Fetch stats + price first (fast), don't block on leaderboard
+      const [s, p] = await Promise.all([
         fetch('/api/stats').then(r => r.json()),
         fetch('/api/price').then(r => r.json()),
-        fetch(`/api/leaderboard?${params}`).then(r => r.json()),
       ])
       setStats(s)
       setPrice(p)
-      setLb(l)
       const time = new Date().toLocaleTimeString()
       setLastUpdate(time)
-      try {
-        localStorage.setItem('botcoin-cache', JSON.stringify({ stats: s, price: p, lb: l, time }))
-      } catch {}
+
+      // Leaderboard fetched separately so it doesn't block the UI
+      fetch(`/api/leaderboard?${params}`).then(r => r.json()).then(l => {
+        setLb(l)
+        try {
+          localStorage.setItem('botcoin-cache', JSON.stringify({ stats: s, price: p, lb: l, time }))
+        } catch {}
+      }).catch(() => {})
     } catch {}
   }, [page, sortBy, sortOrder])
 

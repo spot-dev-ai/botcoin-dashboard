@@ -195,13 +195,23 @@ export async function GET(request: Request) {
   try {
     const now = Date.now()
 
-    // Use cache if fresh
+    // Return stale cache immediately if available, refresh in background
     let miners: MinerData[]
     let source = 'cache'
     let epochId = 0
+    const staleThreshold = LEADERBOARD_CACHE_TTL * 4 // 3 min max staleness
 
     if (cachedLeaderboard.length > 0 && now - leaderboardCacheTime < LEADERBOARD_CACHE_TTL) {
       miners = [...cachedLeaderboard]
+    } else if (cachedLeaderboard.length > 0 && now - leaderboardCacheTime < staleThreshold) {
+      // Return stale data NOW, refresh in background
+      miners = [...cachedLeaderboard]
+      source = 'stale-cache'
+      // Fire-and-forget background refresh
+      buildLeaderboard().then(result => {
+        cachedLeaderboard = result.miners
+        leaderboardCacheTime = Date.now()
+      }).catch(() => {})
     } else {
       const result = await buildLeaderboard()
       miners = result.miners
