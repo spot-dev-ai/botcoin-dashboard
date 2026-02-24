@@ -90,18 +90,35 @@ export default function Home() {
   const [drawerAddress, setDrawerAddress] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  // Hydrate from localStorage cache on mount
+  // Hydrate from static snapshot first (instant, edge-served), then localStorage
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem('botcoin-cache')
-      if (cached) {
-        const { stats: s, price: p, lb: l, time } = JSON.parse(cached)
-        if (s) setStats(s)
-        if (p) setPrice(p)
-        if (l) setLb(l)
-        if (time) setLastUpdate(time + ' (cached)')
-      }
-    } catch {}
+    async function loadSnapshot() {
+      try {
+        // Snapshot: all data in one request, CDN-cached at the edge
+        const res = await fetch('/api/snapshot')
+        if (res.ok) {
+          const snap = await res.json()
+          if (snap.stats) setStats(snap.stats)
+          if (snap.price) setPrice(snap.price)
+          if (snap.leaderboard) setLb(snap.leaderboard)
+          const age = Math.round((Date.now() - snap.ts) / 1000)
+          setLastUpdate(`snapshot (${age}s ago)`)
+          return
+        }
+      } catch {}
+      // Fallback: localStorage
+      try {
+        const cached = localStorage.getItem('botcoin-cache')
+        if (cached) {
+          const { stats: s, price: p, lb: l, time } = JSON.parse(cached)
+          if (s) setStats(s)
+          if (p) setPrice(p)
+          if (l) setLb(l)
+          if (time) setLastUpdate(time + ' (cached)')
+        }
+      } catch {}
+    }
+    loadSnapshot()
   }, [])
 
   const fetchData = useCallback(async () => {
