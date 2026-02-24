@@ -1,0 +1,577 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   DESIGN SYSTEM - Modern Dark Theme
+   Inspired by: Calendar, Search, Dashboard, CRM references
+   ============================================ */
+
+:root {
+  /* Background Colors */
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #0f0f0f;
+  --bg-card: #141414;
+  --bg-card-hover: #1a1a1a;
+  --bg-elevated: #1f1f1f;
+  --bg-input: #1a1a1a;
+  
+  /* Border Colors */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.1);
+  --border-hover: rgba(255, 255, 255, 0.15);
+  --border-focus: rgba(59, 130, 246, 0.5);
+  
+  /* Primary Colors - Blue Accent */
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-muted: rgba(59, 130, 246, 0.15);
+  --primary-glow: rgba(59, 130, 246, 0.3);
+  
+  /* Secondary Colors - Purple Accent */
+  --secondary: #8b5cf6;
+  --secondary-hover: #a78bfa;
+  --secondary-muted: rgba(139, 92, 246, 0.15);
+  
+  /* Semantic Colors */
+  --success: #10b981;
+  --success-muted: rgba(16, 185, 129, 0.15);
+  --warning: #f59e0b;
+  --warning-muted: rgba(245, 158, 11, 0.15);
+  --danger: #ef4444;
+  --danger-muted: rgba(239, 68, 68, 0.15);
+  --info: #06b6d4;
+  --info-muted: rgba(6, 182, 212, 0.15);
+  
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --text-dim: #52525b;
+  
+  /* Spacing */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   SCROLLBAR
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+
+/* ============================================
+   TYPOGRAPHY
+   ============================================ */
+
+.text-display {
+  @apply text-3xl font-bold tracking-tight;
+}
+
+.text-heading {
+  @apply text-xl font-semibold tracking-tight;
+}
+
+.text-subheading {
+  @apply text-lg font-medium;
+}
+
+.text-body {
+  @apply text-sm leading-relaxed;
+}
+
+.text-caption {
+  @apply text-xs text-zinc-500;
+}
+
+/* ============================================
+   CARD STYLES
+   ============================================ */
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-normal);
+}
+
+.card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+}
+
+.card-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.card-interactive {
+  @apply card cursor-pointer;
+}
+
+.card-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   BUTTON STYLES
+   ============================================ */
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 font-medium transition-all;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+}
+
+.btn-lg {
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: var(--radius-md);
+}
+
+.btn-primary {
+  @apply btn;
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.btn-secondary {
+  @apply btn;
+  background: transparent;
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.btn-ghost {
+  @apply btn;
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.btn-danger {
+  @apply btn;
+  background: var(--danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* ============================================
+   INPUT STYLES
+   ============================================ */
+
+.input {
+  @apply w-full bg-[#1a1a1a] text-white placeholder-zinc-500;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 14px;
+  transition: all var(--transition-fast);
+}
+
+.input:hover {
+  border-color: var(--border-hover);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.input-lg {
+  padding: 14px 18px;
+  font-size: 16px;
+  border-radius: var(--radius-lg);
+}
+
+/* ============================================
+   SEARCH BAR (Command Palette Style)
+   ============================================ */
+
+.search-bar {
+  @apply relative;
+}
+
+.search-bar-input {
+  @apply w-full bg-[#141414] text-white placeholder-zinc-500;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px 48px 16px 48px;
+  font-size: 16px;
+  transition: all var(--transition-normal);
+}
+
+.search-bar-input:hover {
+  border-color: var(--border-default);
+  background: var(--bg-card-hover);
+}
+
+.search-bar-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow), 0 8px 32px rgba(0, 0, 0, 0.4);
+  background: var(--bg-card-hover);
+}
+
+.search-bar-icon {
+  @apply absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none;
+}
+
+.search-bar-kbd {
+  @apply absolute right-4 top-1/2 -translate-y-1/2;
+  padding: 4px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+/* ============================================
+   BADGE/TAG STYLES
+   ============================================ */
+
+.badge {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium;
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+.badge-primary {
+  background: var(--primary-muted);
+  color: var(--primary-hover);
+}
+
+.badge-secondary {
+  background: var(--secondary-muted);
+  color: var(--secondary-hover);
+}
+
+.badge-success {
+  background: var(--success-muted);
+  color: var(--success);
+}
+
+.badge-warning {
+  background: var(--warning-muted);
+  color: var(--warning);
+}
+
+.badge-danger {
+  background: var(--danger-muted);
+  color: var(--danger);
+}
+
+.badge-info {
+  background: var(--info-muted);
+  color: var(--info);
+}
+
+/* ============================================
+   STAT CARD STYLES
+   ============================================ */
+
+.stat-card {
+  @apply card p-5;
+}
+
+.stat-card-label {
+  @apply text-xs font-medium text-zinc-500 uppercase tracking-wider;
+}
+
+.stat-card-value {
+  @apply text-2xl font-bold mt-1;
+}
+
+.stat-card-change {
+  @apply text-xs mt-2 flex items-center gap-1;
+}
+
+.stat-card-change.positive {
+  color: var(--success);
+}
+
+.stat-card-change.negative {
+  color: var(--danger);
+}
+
+/* ============================================
+   TABLE STYLES
+   ============================================ */
+
+.table-container {
+  @apply overflow-x-auto;
+}
+
+.table {
+  @apply w-full text-sm;
+}
+
+.table th {
+  @apply text-left py-3 px-4 text-xs font-medium text-zinc-500 uppercase tracking-wider border-b border-zinc-800;
+}
+
+.table td {
+  @apply py-3 px-4 border-b border-zinc-800/50;
+}
+
+.table tr:hover td {
+  background: var(--bg-card);
+}
+
+/* ============================================
+   CHART CONTAINER
+   ============================================ */
+
+.chart-container {
+  @apply card p-5;
+}
+
+.chart-title {
+  @apply text-base font-semibold text-white mb-4;
+}
+
+/* ============================================
+   NAVIGATION TABS
+   ============================================ */
+
+.nav-tabs {
+  @apply flex gap-1 p-1 rounded-xl;
+  background: var(--bg-card);
+}
+
+.nav-tab {
+  @apply flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all;
+  color: var(--text-muted);
+}
+
+.nav-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+}
+
+.nav-tab.active {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   MODAL/DIALOG STYLES
+   ============================================ */
+
+.modal-overlay {
+  @apply fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50;
+}
+
+.modal-content {
+  @apply bg-[#141414] rounded-2xl p-6 max-w-md w-full mx-4 border border-zinc-800;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================
+   CALENDAR EVENT STYLES
+   ============================================ */
+
+.calendar-event {
+  @apply w-full p-2 rounded-lg text-left transition-all text-xs;
+  border: 1px solid transparent;
+}
+
+.calendar-event:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+/* ============================================
+   STATUS INDICATOR
+   ============================================ */
+
+.status-dot {
+  @apply w-2 h-2 rounded-full;
+}
+
+.status-dot.online {
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+
+.status-dot.offline {
+  background: var(--text-muted);
+}
+
+.status-dot.warning {
+  background: var(--warning);
+  box-shadow: 0 0 8px var(--warning);
+}
+
+.status-dot.error {
+  background: var(--danger);
+  box-shadow: 0 0 8px var(--danger);
+}
+
+.status-dot.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+
+.shimmer {
+  background: linear-gradient(90deg, var(--bg-card) 0%, var(--bg-elevated) 50%, var(--bg-card) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.spinner {
+  @apply w-5 h-5 border-2 rounded-full animate-spin;
+  border-color: var(--primary-muted);
+  border-top-color: var(--primary);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.glow-blue {
+  box-shadow: 0 0 20px var(--primary-glow);
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px var(--secondary-muted);
+}
+
+.glow-green {
+  box-shadow: 0 0 20px var(--success-muted);
+}
+
+.gradient-text {
+  @apply bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent;
+}
+
+.gradient-blue-purple {
+  @apply bg-gradient-to-r from-blue-500 to-purple-500;
+}
+
+/* Line clamp */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Focus visible for keyboard navigation */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--primary);
+}
+
+/* Smooth transitions */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Force graph canvas styles */
+canvas {
+  outline: none !important;
+}
