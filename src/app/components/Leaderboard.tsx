@@ -1,7 +1,5 @@
 'use client'
 
-const OUR_WALLET = '0x6a6c98e4a70e6820f828fb3e5faaa7f03b520963'
-
 interface Props {
   data: {
     epoch: string
@@ -57,16 +55,12 @@ export default function Leaderboard({ data }: Props) {
           </thead>
           <tbody>
             {data?.leaderboard.map((miner, i) => {
-              const isUs = miner.address.toLowerCase() === OUR_WALLET.toLowerCase()
               const share = totalCredits > 0 ? ((miner.credits / totalCredits) * 100).toFixed(2) : '0'
               
               return (
                 <tr
                   key={miner.address}
-                  className={`
-                    border-t border-white/[0.03] transition-colors
-                    ${isUs ? 'highlight-row bg-blue-500/[0.08]' : 'hover:bg-white/[0.02]'}
-                  `}
+                  className="border-t border-white/[0.03] transition-colors hover:bg-white/[0.02]"
                 >
                   <td className="py-3 px-4">
                     <span className={`text-sm ${i < 3 ? 'text-lg' : 'text-zinc-500 font-mono text-xs'}`}>
@@ -74,24 +68,17 @@ export default function Leaderboard({ data }: Props) {
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={`https://basescan.org/address/${miner.address}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-mono text-sm text-zinc-300 hover:text-blue-400 transition-colors"
-                      >
-                        {truncateAddress(miner.address)}
-                      </a>
-                      {isUs && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-medium">
-                          YOU
-                        </span>
-                      )}
-                    </div>
+                    <a
+                      href={`https://basescan.org/address/${miner.address}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-sm text-zinc-300 hover:text-blue-400 transition-colors"
+                    >
+                      {truncateAddress(miner.address)}
+                    </a>
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <span className={`font-mono text-sm font-medium ${isUs ? 'text-blue-400' : 'text-white'}`}>
+                    <span className="font-mono text-sm font-medium text-white">
                       {miner.credits.toLocaleString()}
                     </span>
                   </td>
@@ -104,7 +91,7 @@ export default function Leaderboard({ data }: Props) {
                     <div className="flex items-center justify-end gap-2">
                       <div className="w-16 h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full ${isUs ? 'bg-blue-500' : 'bg-zinc-600'}`}
+                          className="h-full rounded-full bg-zinc-600"
                           style={{ width: `${Math.min(100, parseFloat(share) * 2)}%` }}
                         />
                       </div>
