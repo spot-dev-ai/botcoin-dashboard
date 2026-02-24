@@ -111,9 +111,9 @@ export default function Home() {
         const res = await fetch('/api/snapshot')
         if (res.ok) {
           const snap = await res.json()
-          if (snap.stats) setStats(snap.stats)
-          if (snap.price) setPrice(snap.price)
-          if (snap.leaderboard) setLb(snap.leaderboard)
+          if (snap.stats?.currentEpochId) setStats(snap.stats)
+          if (snap.price?.price) setPrice(snap.price)
+          if (snap.leaderboard?.miners?.length > 0) setLb(snap.leaderboard)
           const age = Math.round((Date.now() - snap.ts) / 1000)
           setLastUpdate(`snapshot (${age}s ago)`)
           return
@@ -140,20 +140,23 @@ export default function Home() {
 
       // Fetch stats + price first (fast), don't block on leaderboard
       const [s, p] = await Promise.all([
-        fetch('/api/stats').then(r => r.json()),
-        fetch('/api/price').then(r => r.json()),
+        fetch('/api/stats').then(r => r.json()).catch(() => null),
+        fetch('/api/price').then(r => r.json()).catch(() => null),
       ])
-      setStats(s)
-      setPrice(p)
+      // Only update if we got valid data — never overwrite good cache with errors
+      if (s && s.currentEpochId) setStats(s)
+      if (p && p.price) setPrice(p)
       const time = new Date().toLocaleTimeString()
       setLastUpdate(time)
 
       // Leaderboard fetched separately so it doesn't block the UI
       fetch(`/api/leaderboard?${params}`).then(r => r.json()).then(l => {
-        setLb(l)
-        try {
-          localStorage.setItem('botcoin-cache', JSON.stringify({ stats: s, price: p, lb: l, time }))
-        } catch {}
+        if (l && l.miners && l.miners.length > 0) {
+          setLb(l)
+          try {
+            localStorage.setItem('botcoin-cache', JSON.stringify({ stats: s, price: p, lb: l, time }))
+          } catch {}
+        }
       }).catch(() => {})
     } catch {}
   }, [page, sortBy, sortOrder])
