@@ -209,13 +209,12 @@ export default function Home() {
             <span className="text-[10px] text-[#555]">// base chain</span>
           </div>
           <div className="flex items-center gap-3">
-            {stats?.source && (
-              <span className="text-[10px] text-[#333]" title={stats.source}>
-                {stats.source.includes('onchain') ? '⛓' : stats.source.includes('avc') ? '🔄' : '•'}
+            
+            <span className="text-[10px] text-[#333]" suppressHydrationWarning>
+                {stats?.source?.includes('onchain') ? '⛓' : stats?.source?.includes('avc') ? '🔄' : '...'}
               </span>
-            )}
             <div className="pulse-dot" />
-            <span className="text-[10px] text-[#555]">{lastUpdate || '...'}</span>
+            <span className="text-[10px] text-[#555]" suppressHydrationWarning>{lastUpdate || "..."}</span>
           </div>
         </div>
       </nav>

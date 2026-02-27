@@ -9,8 +9,8 @@ export const maxDuration = 30
 const COORDINATOR = 'https://coordinator.agentmoney.net'
 const AVC_API = 'https://botcoin.avc.codes/api/leaderboard'
 const BOTCOIN_CONTRACT = '0xA601877977340862Ca67f816eb079958E5bd0BA3'
-const ALCHEMY_URL = `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
-const MINING_CONTRACT = '0xd572e61e1B627d4105832C815Ccd722B5baD9233'
+const ALCHEMY_URL = `https://mainnet.base.org`
+const MINING_CONTRACT = '0xcf5f2d541eeb0fb4ca35f1973de5f2b02dfc3716'
 const POOL_ADDRESS = '0x5154ba0d6cfb5fe27644bc856064991e1c7672b7eb533d5d457db4c7144c2af5'
 
 async function ethCall(data: string): Promise<string | null> {

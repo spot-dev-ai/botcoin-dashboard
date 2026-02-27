@@ -27,7 +27,7 @@ URL: `https://base-mainnet.g.alchemy.com/v2/Njbz8cn6hHtnlMHEGxpWB`
 Address: `0xA601877977340862Ca67f816eb079958E5bd0BA3` (Base chain, ERC-20)
 
 ### 4. Mining Contract  
-Address: `0xd572e61e1B627d4105832C815Ccd722B5baD9233` (Base chain)
+Address: `0xcf5f2d541eeb0fb4ca35f1973de5f2b02dfc3716` (Base chain)
 - This is where receipts are submitted and rewards claimed
 - Parse ReceiptSubmitted events to build the leaderboard
 
@@ -78,7 +78,7 @@ Create these server-side API routes to avoid CORS:
 ALCHEMY_API_URL=https://base-mainnet.g.alchemy.com/v2/Njbz8cn6hHtnlMHEGxpWB
 COORDINATOR_URL=https://coordinator.agentmoney.net
 BOTCOIN_CONTRACT=0xA601877977340862Ca67f816eb079958E5bd0BA3
-MINING_CONTRACT=0xd572e61e1B627d4105832C815Ccd722B5baD9233
+MINING_CONTRACT=0xcf5f2d541eeb0fb4ca35f1973de5f2b02dfc3716
 ```
 
 ## Run

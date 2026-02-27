@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 
 const COORDINATOR = 'https://coordinator.agentmoney.net'
-const ALCHEMY_URL = `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
-const MINING_CONTRACT = '0xd572e61e1B627d4105832C815Ccd722B5baD9233'
+const ALCHEMY_URL = `https://mainnet.base.org`
+const MINING_CONTRACT = '0xcf5f2d541eeb0fb4ca35f1973de5f2b02dfc3716'
 
 async function ethCall(data: string): Promise<string | null> {
   try {
