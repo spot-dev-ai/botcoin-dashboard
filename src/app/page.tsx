@@ -255,10 +255,10 @@ export default function Home() {
           <div className="p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="text-[10px] text-[#555] uppercase tracking-widest">time to next epoch</div>
-              <div className="text-[10px] text-[#555]">{progress.toFixed(1)}% complete</div>
+              <div suppressHydrationWarning className="text-[10px] text-[#555]">{progress.toFixed(1)}% complete</div>
             </div>
             <div className="text-center py-4" style={{ marginTop: '-30px' }}>
-              <div className="text-5xl font-bold glow-green text-green tracking-[0.15em]">
+              <div suppressHydrationWarning className="text-5xl font-bold glow-green text-green tracking-[0.15em]">
                 {hasEpochData ? <>{pad(h)}<span className="countdown-sep text-[#555]">:</span>{pad(m)}<span className="countdown-sep text-[#555]">:</span>{pad(s)}</> : <span className="text-[#555]">--:--:--</span>}
               </div>
             </div>
@@ -428,7 +428,7 @@ export default function Home() {
                 )}
                 <div className="relative z-10">
                   <div className="text-[10px] text-[#555] uppercase tracking-wider mb-1">price</div>
-                  <div className="text-xl font-bold text-[#e0e0e0]">
+                  <div suppressHydrationWarning className="text-xl font-bold text-[#e0e0e0]">
                     {priceNum ? `$${priceNum.toFixed(8)}` : '---'}
                   </div>
                   {price && change24h !== 0 && (
@@ -476,8 +476,8 @@ function StatBox({ label, value, sub, subColor, accent, valueColor }: {
   return (
     <div className="term-card p-3">
       <div className="text-[10px] text-[#555] uppercase tracking-wider mb-1">{label}</div>
-      <div className={`text-lg font-bold truncate ${valueColor ? valueColor : accent ? 'text-green glow-green' : 'text-[#e0e0e0]'}`}>{value}</div>
-      {sub && <div className={`text-[10px] mt-0.5 ${subColor ?? 'text-[#555]'}`}>{sub}</div>}
+      <div suppressHydrationWarning className={`text-lg font-bold truncate ${valueColor ? valueColor : accent ? 'text-green glow-green' : 'text-[#e0e0e0]'}`}>{value}</div>
+      {sub && <div suppressHydrationWarning className={`text-[10px] mt-0.5 ${subColor ?? 'text-[#555]'}`}>{sub}</div>}
     </div>
   )
 }
@@ -549,7 +549,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between items-center">
       <span className="text-[10px] text-[#555]">{label}</span>
-      <span className="text-xs text-[#888]">{value}</span>
+      <span suppressHydrationWarning className="text-xs text-[#888]">{value}</span>
     </div>
   )
 }
