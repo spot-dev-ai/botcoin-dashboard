@@ -89,10 +89,10 @@ function getInitialCache() {
 }
 
 export default function Home() {
-  const initial = getInitialCache()
-  const [stats, setStats] = useState<Stats | null>(initial.stats)
-  const [price, setPrice] = useState<PriceData | null>(initial.price)
-  const [lb, setLb] = useState<LeaderboardData | null>(initial.lb)
+  
+  const [stats, setStats] = useState<Stats | null>(null)
+  const [price, setPrice] = useState<PriceData | null>(null)
+  const [lb, setLb] = useState<LeaderboardData | null>(null)
   const [now, setNow] = useState(Math.floor(Date.now() / 1000))
   const [lastUpdate, setLastUpdate] = useState('')
   const [page, setPage] = useState(1)
@@ -106,6 +106,16 @@ export default function Home() {
   // Hydrate from static snapshot first (instant, edge-served), then localStorage
   useEffect(() => {
     async function loadSnapshot() {
+      // Load localStorage cache first for instant render
+      try {
+        const cached = localStorage.getItem("botcoin-cache");
+        if (cached) {
+          const { stats: s, price: p, lb: l } = JSON.parse(cached);
+          if (s) setStats(s);
+          if (p) setPrice(p);
+          if (l) setLb(l);
+        }
+      } catch {}
       try {
         // Snapshot: all data in one request, CDN-cached at the edge
         const res = await fetch('/api/snapshot')
